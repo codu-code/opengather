@@ -2,7 +2,7 @@
 
 import { truncate } from "@/lib/utils";
 import { ImageResponse } from "next/og";
-import { sql } from "@vercel/postgres";
+import prisma from "@/lib/prisma";
 
 export const runtime = "edge";
 
@@ -18,21 +18,36 @@ export default async function PostOG({
     ? domain.replace(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`, "")
     : null;
 
-  const response = await sql`
-  SELECT post.title, post.description, post.image, "user".name as "authorName", "user".image as "authorImage"
-  FROM "Post" AS post 
-  INNER JOIN "Site" AS site ON post."siteId" = site.id 
-  INNER JOIN "User" AS "user" ON site."userId" = "user".id 
-  WHERE 
-    (
-        site.subdomain = ${subdomain}
-        OR site."customDomain" = ${domain}
-    )
-    AND post.slug = ${slug}
-  LIMIT 1;
-`;
-
-  const data = response.rows[0];
+  const data = await prisma.post.findFirst({
+    where: {
+      slug: slug,
+      site: {
+        OR: [
+          {
+            subdomain: subdomain,
+          },
+          {
+            customDomain: domain,
+          },
+        ],
+      },
+    },
+    select: {
+      title: true,
+      description: true,
+      image: true,
+      site: {
+        select: {
+          user: {
+            select: {
+              name: true,
+              image: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
   if (!data) {
     return new Response("Not found", { status: 404 });
@@ -50,20 +65,20 @@ export default async function PostOG({
             {data.title}
           </h1>
           <p tw="mt-4 text-xl text-gray-600 max-w-xl text-center">
-            {truncate(data.description, 120)}
+            {truncate(data.description!, 120)}
           </p>
           <div tw="flex items-center justify-center">
             <img
               tw="w-12 h-12 rounded-full mr-4"
-              src={data.authorImage}
-              alt={data.authorName}
+              src={data.site?.user?.image!}
+              alt={data.site?.user?.name!}
             />
-            <p tw="text-xl font-medium text-gray-900">by {data.authorName}</p>
+            <p tw="text-xl font-medium text-gray-900">by {data.site?.user?.name!}</p>
           </div>
           <img
             tw="mt-4 w-5/6 rounded-2xl border border-gray-200 shadow-md"
-            src={data.image}
-            alt={data.title}
+            src={data.image!}
+            alt={data.title!}
           />
         </div>
       </div>
