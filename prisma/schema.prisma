@@ -23,8 +23,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
-  sites         Site[]
-  posts         Post[]
+  communities   Community[]
+  events        Event[]
 }
 
 model Account {
@@ -68,7 +68,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Post {
+model Event {
   id            String   @id @default(cuid()) @map("_id")
   title         String?  
   description   String?  
@@ -79,17 +79,17 @@ model Post {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   published     Boolean  @default(false)
-  site          Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  siteId        String?
+  community     Community?    @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  communityId   String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId        String?
 
-  @@unique([slug, siteId])
-  @@index([siteId])
+  @@unique([slug, communityId])
+  @@index([communityId])
   @@index([userId])
 }
 
-model Site {
+model Community {
   id            String   @id @default(cuid()) @map("_id")
   name          String?
   description   String?  
@@ -104,7 +104,7 @@ model Site {
   updatedAt     DateTime @updatedAt
   user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId        String?
-  posts         Post[]
+  events        Event[]
 
   @@index([userId])
 }

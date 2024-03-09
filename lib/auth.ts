@@ -75,10 +75,10 @@ export function getSession() {
   } | null>;
 }
 
-export function withSiteAuth(action: any) {
+export function withCommunityAuth(action: any) {
   return async (
     formData: FormData | null,
-    siteId: string,
+    communityId: string,
     key: string | null,
   ) => {
     const session = await getSession();
@@ -87,25 +87,25 @@ export function withSiteAuth(action: any) {
         error: "Not authenticated",
       };
     }
-    const site = await prisma.site.findUnique({
+    const community = await prisma.community.findUnique({
       where: {
-        id: siteId,
+        id: communityId,
       },
     });
-    if (!site || site.userId !== session.user.id) {
+    if (!community || community.userId !== session.user.id) {
       return {
         error: "Not authorized",
       };
     }
 
-    return action(formData, site, key);
+    return action(formData, community, key);
   };
 }
 
-export function withPostAuth(action: any) {
+export function withEventAuth(action: any) {
   return async (
     formData: FormData | null,
-    postId: string,
+    eventId: string,
     key: string | null,
   ) => {
     const session = await getSession();
@@ -114,20 +114,20 @@ export function withPostAuth(action: any) {
         error: "Not authenticated",
       };
     }
-    const post = await prisma.post.findUnique({
+    const event = await prisma.event.findUnique({
       where: {
-        id: postId,
+        id: eventId,
       },
       include: {
-        site: true,
+        community: true,
       },
     });
-    if (!post || post.userId !== session.user.id) {
+    if (!event || event.userId !== session.user.id) {
       return {
-        error: "Post not found",
+        error: "Event not found",
       };
     }
 
-    return action(formData, post, key);
+    return action(formData, event, key);
   };
 }

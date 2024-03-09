@@ -21,7 +21,7 @@ import {
   useSelectedLayoutSegments,
 } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { getSiteFromPostId } from "@/lib/actions";
+import { getCommunityFromEventId } from "@/lib/actions";
 import Image from "next/image";
 
 const externalLinks = [
@@ -41,7 +41,7 @@ const externalLinks = [
     icon: <FileCode width={18} />,
   },
   {
-    name: "View demo site",
+    name: "View demo Community",
     href: "https://demo.vercel.pub",
     icon: <Layout width={18} />,
   },
@@ -66,59 +66,59 @@ export default function Nav({ children }: { children: ReactNode }) {
   const segments = useSelectedLayoutSegments();
   const { id } = useParams() as { id?: string };
 
-  const [siteId, setSiteId] = useState<string | null>();
+  const [communityId, setCommunityId] = useState<string | null>();
 
   useEffect(() => {
-    if (segments[0] === "post" && id) {
-      getSiteFromPostId(id).then((id) => {
-        setSiteId(id);
+    if (segments[0] === "event" && id) {
+      getCommunityFromEventId(id).then((id) => {
+        setCommunityId(id);
       });
     }
   }, [segments, id]);
 
   const tabs = useMemo(() => {
-    if (segments[0] === "site" && id) {
+    if (segments[0] === "community" && id) {
       return [
         {
-          name: "Back to All Sites",
-          href: "/sites",
+          name: "Back to All Communities",
+          href: "/communities",
           icon: <ArrowLeft width={18} />,
         },
         {
-          name: "Posts",
-          href: `/site/${id}`,
+          name: "Events",
+          href: `/community/${id}`,
           isActive: segments.length === 2,
           icon: <Newspaper width={18} />,
         },
         {
           name: "Analytics",
-          href: `/site/${id}/analytics`,
+          href: `/community/${id}/analytics`,
           isActive: segments.includes("analytics"),
           icon: <BarChart3 width={18} />,
         },
         {
           name: "Settings",
-          href: `/site/${id}/settings`,
+          href: `/community/${id}/settings`,
           isActive: segments.includes("settings"),
           icon: <Settings width={18} />,
         },
       ];
-    } else if (segments[0] === "post" && id) {
+    } else if (segments[0] === "event" && id) {
       return [
         {
-          name: "Back to All Posts",
-          href: siteId ? `/site/${siteId}` : "/sites",
+          name: "Back to All Events",
+          href: communityId ? `/community/${communityId}` : "/communities",
           icon: <ArrowLeft width={18} />,
         },
         {
           name: "Editor",
-          href: `/post/${id}`,
+          href: `/event/${id}`,
           isActive: segments.length === 2,
           icon: <Edit3 width={18} />,
         },
         {
           name: "Settings",
-          href: `/post/${id}/settings`,
+          href: `/event/${id}/settings`,
           isActive: segments.includes("settings"),
           icon: <Settings width={18} />,
         },
@@ -132,9 +132,9 @@ export default function Nav({ children }: { children: ReactNode }) {
         icon: <LayoutDashboard width={18} />,
       },
       {
-        name: "Sites",
-        href: "/sites",
-        isActive: segments[0] === "sites",
+        name: "Communities",
+        href: "/communities",
+        isActive: segments[0] === "communities",
         icon: <Globe width={18} />,
       },
       {
@@ -144,7 +144,7 @@ export default function Nav({ children }: { children: ReactNode }) {
         icon: <Settings width={18} />,
       },
     ];
-  }, [segments, id, siteId]);
+  }, [segments, id, communityId]);
 
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -160,7 +160,7 @@ export default function Nav({ children }: { children: ReactNode }) {
       <button
         className={`fixed z-20 ${
           // left align for Editor, right align for other pages
-          segments[0] === "post" && segments.length === 2 && !showSidebar
+          segments[0] === "event" && segments.length === 2 && !showSidebar
             ? "left-5 top-5"
             : "right-5 top-7"
         } sm:hidden`}

@@ -3,14 +3,14 @@ import prisma from "@/lib/prisma";
 import { serialize } from "next-mdx-remote/serialize";
 import { replaceExamples, replaceTweets } from "@/lib/remark-plugins";
 
-export async function getSiteData(domain: string) {
+export async function getCommunityData(domain: string) {
   const subdomain = domain.endsWith(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`)
     ? domain.replace(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`, "")
     : null;
 
   return await unstable_cache(
     async () => {
-      return prisma.site.findUnique({
+      return prisma.community.findUnique({
         where: subdomain ? { subdomain } : { customDomain: domain },
         include: { user: true },
       });
@@ -23,16 +23,16 @@ export async function getSiteData(domain: string) {
   )();
 }
 
-export async function getPostsForSite(domain: string) {
+export async function getEventsForCommunity(domain: string) {
   const subdomain = domain.endsWith(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`)
     ? domain.replace(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`, "")
     : null;
 
   return await unstable_cache(
     async () => {
-      return prisma.post.findMany({
+      return prisma.event.findMany({
         where: {
-          site: subdomain ? { subdomain } : { customDomain: domain },
+          community: subdomain ? { subdomain } : { customDomain: domain },
           published: true,
         },
         select: {
@@ -50,29 +50,29 @@ export async function getPostsForSite(domain: string) {
         ],
       });
     },
-    [`${domain}-posts`],
+    [`${domain}-events`],
     {
       revalidate: 900,
-      tags: [`${domain}-posts`],
+      tags: [`${domain}-events`],
     },
   )();
 }
 
-export async function getPostData(domain: string, slug: string) {
+export async function getEventData(domain: string, slug: string) {
   const subdomain = domain.endsWith(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`)
     ? domain.replace(`.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`, "")
     : null;
 
   return await unstable_cache(
     async () => {
-      const data = await prisma.post.findFirst({
+      const data = await prisma.event.findFirst({
         where: {
-          site: subdomain ? { subdomain } : { customDomain: domain },
+          community: subdomain ? { subdomain } : { customDomain: domain },
           slug,
           published: true,
         },
         include: {
-          site: {
+          community: {
             include: {
               user: true,
             },
@@ -82,11 +82,11 @@ export async function getPostData(domain: string, slug: string) {
 
       if (!data) return null;
 
-      const [mdxSource, adjacentPosts] = await Promise.all([
+      const [mdxSource, adjacentEvents] = await Promise.all([
         getMdxSource(data.content!),
-        prisma.post.findMany({
+        prisma.event.findMany({
           where: {
-            site: subdomain ? { subdomain } : { customDomain: domain },
+            community: subdomain ? { subdomain } : { customDomain: domain },
             published: true,
             NOT: {
               id: data.id,
@@ -106,7 +106,7 @@ export async function getPostData(domain: string, slug: string) {
       return {
         ...data,
         mdxSource,
-        adjacentPosts,
+        adjacentEvents,
       };
     },
     [`${domain}-${slug}`],

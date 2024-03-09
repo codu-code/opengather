@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import Sites from "@/components/sites";
+import Communities from "@/components/communities";
 import OverviewStats from "@/components/overview-stats";
-import Posts from "@/components/posts";
+import Events from "@/components/events";
 import Link from "next/link";
 import PlaceholderCard from "@/components/placeholder-card";
-import OverviewSitesCTA from "@/components/overview-sites-cta";
+import OverviewCommunitiesCTA from "@/components/overview-communities-cta";
 
 export default function Overview() {
   return (
@@ -19,10 +19,10 @@ export default function Overview() {
       <div className="flex flex-col space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="font-cal text-3xl font-bold dark:text-white">
-            Top Sites
+            Top Communities
           </h1>
           <Suspense fallback={null}>
-            <OverviewSitesCTA />
+            <OverviewCommunitiesCTA />
           </Suspense>
         </div>
         <Suspense
@@ -34,13 +34,13 @@ export default function Overview() {
             </div>
           }
         >
-          <Sites limit={4} />
+          <Communities limit={4} />
         </Suspense>
       </div>
 
       <div className="flex flex-col space-y-6">
         <h1 className="font-cal text-3xl font-bold dark:text-white">
-          Recent Posts
+          Recent Events
         </h1>
         <Suspense
           fallback={
@@ -51,7 +51,7 @@ export default function Overview() {
             </div>
           }
         >
-          <Posts limit={8} />
+          <Events limit={8} />
         </Suspense>
       </div>
     </div>

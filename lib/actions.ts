@@ -1,9 +1,9 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { Post, Site } from "@prisma/client";
+import { Event, Community } from "@prisma/client";
 import { revalidateTag } from "next/cache";
-import { withPostAuth, withSiteAuth } from "./auth";
+import { withEventAuth, withCommunityAuth } from "./auth";
 import { getSession } from "@/lib/auth";
 import {
   addDomainToVercel,
@@ -21,7 +21,7 @@ const nanoid = customAlphabet(
   7,
 ); // 7-character random string
 
-export const createSite = async (formData: FormData) => {
+export const createCommunity = async (formData: FormData) => {
   const session = await getSession();
   if (!session?.user.id) {
     return {
@@ -33,7 +33,7 @@ export const createSite = async (formData: FormData) => {
   const subdomain = formData.get("subdomain") as string;
 
   try {
-    const response = await prisma.site.create({
+    const response = await prisma.community.create({
       data: {
         name,
         description,
@@ -62,8 +62,8 @@ export const createSite = async (formData: FormData) => {
   }
 };
 
-export const updateSite = withSiteAuth(
-  async (formData: FormData, site: Site, key: string) => {
+export const updateCommunity = withCommunityAuth(
+  async (formData: FormData, community: Community, key: string) => {
     const value = formData.get(key) as string;
 
     try {
@@ -77,9 +77,9 @@ export const updateSite = withSiteAuth(
 
           // if the custom domain is valid, we need to add it to Vercel
         } else if (validDomainRegex.test(value)) {
-          response = await prisma.site.update({
+          response = await prisma.community.update({
             where: {
-              id: site.id,
+              id: community.id,
             },
             data: {
               customDomain: value,
@@ -93,9 +93,9 @@ export const updateSite = withSiteAuth(
 
           // empty value means the user wants to remove the custom domain
         } else if (value === "") {
-          response = await prisma.site.update({
+          response = await prisma.community.update({
             where: {
-              id: site.id,
+              id: community.id,
             },
             data: {
               customDomain: null,
@@ -103,15 +103,15 @@ export const updateSite = withSiteAuth(
           });
         }
 
-        // if the site had a different customDomain before, we need to remove it from Vercel
-        if (site.customDomain && site.customDomain !== value) {
-          response = await removeDomainFromVercelProject(site.customDomain);
+        // if the community had a different customDomain before, we need to remove it from Vercel
+        if (community.customDomain && community.customDomain !== value) {
+          response = await removeDomainFromVercelProject(community.customDomain);
 
           /* Optional: remove domain from Vercel team 
 
-          // first, we need to check if the apex domain is being used by other sites
-          const apexDomain = getApexDomain(`https://${site.customDomain}`);
-          const domainCount = await prisma.site.count({
+          // first, we need to check if the apex domain is being used by other communitiess
+          const apexDomain = getApexDomain(`https://${community.customDomain}`);
+          const domainCount = await prisma.community.count({
             where: {
               OR: [
                 {
@@ -126,15 +126,15 @@ export const updateSite = withSiteAuth(
             },
           });
 
-          // if the apex domain is being used by other sites
+          // if the apex domain is being used by other communitiess
           // we should only remove it from our Vercel project
           if (domainCount >= 1) {
-            await removeDomainFromVercelProject(site.customDomain);
+            await removeDomainFromVercelProject(community.customDomain);
           } else {
-            // this is the only site using this apex domain
+            // this is the only community using this apex domain
             // so we can remove it entirely from our Vercel team
             await removeDomainFromVercelTeam(
-              site.customDomain
+              community.customDomain
             );
           }
           
@@ -157,9 +157,9 @@ export const updateSite = withSiteAuth(
 
         const blurhash = key === "image" ? await getBlurDataURL(url) : null;
 
-        response = await prisma.site.update({
+        response = await prisma.community.update({
           where: {
-            id: site.id,
+            id: community.id,
           },
           data: {
             [key]: url,
@@ -167,9 +167,9 @@ export const updateSite = withSiteAuth(
           },
         });
       } else {
-        response = await prisma.site.update({
+        response = await prisma.community.update({
           where: {
-            id: site.id,
+            id: community.id,
           },
           data: {
             [key]: value,
@@ -177,15 +177,15 @@ export const updateSite = withSiteAuth(
         });
       }
       console.log(
-        "Updated site data! Revalidating tags: ",
-        `${site.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-metadata`,
-        `${site.customDomain}-metadata`,
+        "Updated community data! Revalidating tags: ",
+        `${community.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-metadata`,
+        `${community.customDomain}-metadata`,
       );
       await revalidateTag(
-        `${site.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-metadata`,
+        `${community.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-metadata`,
       );
-      site.customDomain &&
-        (await revalidateTag(`${site.customDomain}-metadata`));
+      community.customDomain &&
+        (await revalidateTag(`${community.customDomain}-metadata`));
 
       return response;
     } catch (error: any) {
@@ -202,18 +202,18 @@ export const updateSite = withSiteAuth(
   },
 );
 
-export const deleteSite = withSiteAuth(async (_: FormData, site: Site) => {
+export const deleteCommunity = withCommunityAuth(async (_: FormData, community: Community) => {
   try {
-    const response = await prisma.site.delete({
+    const response = await prisma.community.delete({
       where: {
-        id: site.id,
+        id: community.id,
       },
     });
     await revalidateTag(
-      `${site.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-metadata`,
+      `${community.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-metadata`,
     );
     response.customDomain &&
-      (await revalidateTag(`${site.customDomain}-metadata`));
+      (await revalidateTag(`${community.customDomain}-metadata`));
     return response;
   } catch (error: any) {
     return {
@@ -222,63 +222,63 @@ export const deleteSite = withSiteAuth(async (_: FormData, site: Site) => {
   }
 });
 
-export const getSiteFromPostId = async (postId: string) => {
-  const post = await prisma.post.findUnique({
+export const getCommunityFromEventId = async (eventId: string) => {
+  const event = await prisma.event.findUnique({
     where: {
-      id: postId,
+      id: eventId,
     },
     select: {
-      siteId: true,
+      communityId: true,
     },
   });
-  return post?.siteId;
+  return event?.communityId;
 };
 
-export const createPost = withSiteAuth(async (_: FormData, site: Site) => {
+export const createEvent = withCommunityAuth(async (_: FormData, community: Community) => {
   const session = await getSession();
   if (!session?.user.id) {
     return {
       error: "Not authenticated",
     };
   }
-  const response = await prisma.post.create({
+  const response = await prisma.event.create({
     data: {
-      siteId: site.id,
+      communityId: community.id,
       userId: session.user.id,
     },
   });
 
   await revalidateTag(
-    `${site.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-posts`,
+    `${community.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-events`,
   );
-  site.customDomain && (await revalidateTag(`${site.customDomain}-posts`));
+  community.customDomain && (await revalidateTag(`${community.customDomain}-events`));
 
   return response;
 });
 
 // creating a separate function for this because we're not using FormData
-export const updatePost = async (data: Post) => {
+export const updateEvent = async (data: Event) => {
   const session = await getSession();
   if (!session?.user.id) {
     return {
       error: "Not authenticated",
     };
   }
-  const post = await prisma.post.findUnique({
+  const event = await prisma.event.findUnique({
     where: {
       id: data.id,
     },
     include: {
-      site: true,
+      community: true,
     },
   });
-  if (!post || post.userId !== session.user.id) {
+  if (!event || event.userId !== session.user.id) {
     return {
-      error: "Post not found",
+      error: "Event not found",
     };
   }
   try {
-    const response = await prisma.post.update({
+    const response = await prisma.event.update({
       where: {
         id: data.id,
       },
@@ -290,16 +290,16 @@ export const updatePost = async (data: Post) => {
     });
 
     await revalidateTag(
-      `${post.site?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-posts`,
+      `${event.community?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-events`,
     );
     await revalidateTag(
-      `${post.site?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-${post.slug}`,
+      `${event.community?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-${event.slug}`,
     );
 
-    // if the site has a custom domain, we need to revalidate those tags too
-    post.site?.customDomain &&
-      (await revalidateTag(`${post.site?.customDomain}-posts`),
-      await revalidateTag(`${post.site?.customDomain}-${post.slug}`));
+    // if the community has a custom domain, we need to revalidate those tags too
+    event.community?.customDomain &&
+      (await revalidateTag(`${event.community?.customDomain}-events`),
+      await revalidateTag(`${event.community?.customDomain}-${event.slug}`));
 
     return response;
   } catch (error: any) {
@@ -309,11 +309,11 @@ export const updatePost = async (data: Post) => {
   }
 };
 
-export const updatePostMetadata = withPostAuth(
+export const updateEventMetadata = withEventAuth(
   async (
     formData: FormData,
-    post: Post & {
-      site: Site;
+    event: Event & {
+      community: Community;
     },
     key: string,
   ) => {
@@ -331,9 +331,9 @@ export const updatePostMetadata = withPostAuth(
 
         const blurhash = await getBlurDataURL(url);
 
-        response = await prisma.post.update({
+        response = await prisma.event.update({
           where: {
-            id: post.id,
+            id: event.id,
           },
           data: {
             image: url,
@@ -341,9 +341,9 @@ export const updatePostMetadata = withPostAuth(
           },
         });
       } else {
-        response = await prisma.post.update({
+        response = await prisma.event.update({
           where: {
-            id: post.id,
+            id: event.id,
           },
           data: {
             [key]: key === "published" ? value === "true" : value,
@@ -352,16 +352,16 @@ export const updatePostMetadata = withPostAuth(
       }
 
       await revalidateTag(
-        `${post.site?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-posts`,
+        `${event.community?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-events`,
       );
       await revalidateTag(
-        `${post.site?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-${post.slug}`,
+        `${event.community?.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}-${event.slug}`,
       );
 
-      // if the site has a custom domain, we need to revalidate those tags too
-      post.site?.customDomain &&
-        (await revalidateTag(`${post.site?.customDomain}-posts`),
-        await revalidateTag(`${post.site?.customDomain}-${post.slug}`));
+      // if the community has a custom domain, we need to revalidate those tags too
+      event.community?.customDomain &&
+        (await revalidateTag(`${event.community?.customDomain}-events`),
+        await revalidateTag(`${event.community?.customDomain}-${event.slug}`));
 
       return response;
     } catch (error: any) {
@@ -378,14 +378,14 @@ export const updatePostMetadata = withPostAuth(
   },
 );
 
-export const deletePost = withPostAuth(async (_: FormData, post: Post) => {
+export const deleteEvent = withEventAuth(async (_: FormData, event: Event) => {
   try {
-    const response = await prisma.post.delete({
+    const response = await prisma.event.delete({
       where: {
-        id: post.id,
+        id: event.id,
       },
       select: {
-        siteId: true,
+        communityId: true,
       },
     });
     return response;
